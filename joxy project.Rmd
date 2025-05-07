@@ -1,0 +1,371 @@
+---
+title: "**Exploring Key Drivers of House Prices Through Regression-Based Analysis**"
+author: '**Group 4**'
+date: "**2025-04-23**"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+## Introduction and Background
+
+
+
+Understanding what drives *house prices* is essential for both *buyers and sellers, yet in many cases, especially in **less transparent markets, people struggle to determine a **fair price* for a property with specific features. This can make home buying or selling a *confusing and risky* process.
+
+*Data analysis* offers a solution by revealing how *house characteristics—like size, number of rooms, or location—relate to price. This project uses **open-source housing data* and applies *multiple linear regression* to identify key factors influencing house prices.
+
+Although the dataset is based on homes in the *United States, the findings and approach can be valuable in other contexts where **real estate pricing* remains unclear. The goal is to build a simple, *data-driven model* that can help estimate house prices based on common property features.
+
+ <p align="center"><strong>Research Question and Goals for Data Analysis</strong></p>
+
+This project began with an *exploratory data analysis (EDA)* to better understand the dataset and identify patterns or relationships between house features and sale prices. During the EDA, we observed that variables such as *living area, **number of bathrooms, **grade, and **renovation status* appeared to have strong associations with price. These early insights guided our decision to build a predictive model.
+
+<p><strong>Research Question</strong></p>
+
+*What are the key housing features that significantly influence house sale prices, and can we build a regression model to predict price based on those features?*
+
+<p><strong>Goals of the Analysis</strong></p>
+
+1. *Explore relationships* between house characteristics and sale price using visual and statistical techniques.  
+2. *Identify significant predictors* of house price through inferential methods.  
+3. *Build and interpret* a multiple linear regression model to estimate house prices based on selected features.  
+4. *Provide insights* that can support decision-making for individuals looking to buy or sell a home, using data instead of guesswork.
+
+```{r,echo=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(maps)
+library(corrplot)
+data <- read.csv("C:/Users/user/Documents/new_project/traffic/data.csv")
+```
+1) EDA
+
+```{r,echo=FALSE}
+glimpse(data)
+```
+
+
+
+```{r}
+summary(data)
+```
+```{r}
+str(data)
+```
+
+```{r}
+head(data)
+```
+
+
+```{r}
+colnames(data)
+```
+
+
+```{r}
+sum(is.na(data))
+```
+```{r}
+duplicated_rows <- duplicated(data)
+sum(duplicated(data)) 
+```
+2) INSIGHTS
+
+```{r}
+
+# Create the box plot
+boxplot(price ~ bedrooms,
+        data = data,
+        main = "Box Plot of Price by Number of Bedrooms",
+        xlab = "Number of Bedrooms",
+        ylab = "Price",
+        col = "lightgreen",
+        las = 1)  # Horizontal y-axis labels
+
+```
+
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+
+data %>%
+  group_by(city) %>%
+  summarise(avg_price = mean(price)) %>%
+  top_n(10, avg_price) %>%
+  ggplot(aes(x = reorder(city, avg_price), y = avg_price)) +
+  geom_col(fill = "#69b3a2") +
+  coord_flip() +
+  labs(title = "Top 10 Cities by Avg Price", x = "City", y = "Avg Price ($)") +
+  theme_minimal()
+
+
+
+
+```
+
+```{r}
+plot(data$sqft_living, data$price,
+     main = "Price vs Sqft Living",
+     xlab = "Sqft Living",
+     ylab = "Price",
+     pch = 19,
+     col = "darkblue")
+abline(lm(price ~ sqft_living, data = data), col = "red", lwd = 2)
+
+
+```
+```{r}
+plot(data$sqft_lot, data$price,
+     main = "Price vs Sqft Lot",
+     xlab = "Sqft Lot",
+     ylab = "Price",
+     pch = 19,
+     col = "green")
+abline(lm(price ~ sqft_lot, data = data), col = "red", lwd = 2)
+
+
+```
+```{r}
+ggplot(data,aes(y=price,x=sqft_living)) +
+       geom_point() + 
+        xlim(0, 9000) +
+        ylim(0, 5000000) +
+        geom_smooth(formula = y ~ x,method="lm")
+```
+
+
+```{r}
+library(car)
+# Remove rows with missing or problematic price values
+clean_data <- data[!is.na(data$price) & data$price > 0, ]
+
+# Fit the model with clean data
+model <- lm(log(price) ~ sqft_living + bedrooms + bathrooms + sqft_lot + yr_built + condition + yr_renovated +waterfront + sqft_above,
+data = clean_data)
+summary(model)
+
+```
+```{r}
+model <- lm(log(price) ~ log(sqft_living)+ bedrooms + bathrooms + sqft_lot +
+              yr_built + condition + yr_renovated + waterfront + view +
+              sqft_above + sqft_basement + floors + city,
+            data = clean_data)
+summary(model)
+
+
+```
+```{r}
+stepwise_model <- step(model, direction = "both")
+summary(stepwise_model)
+```
+
+
+```{r}
+summary(model)$r.squared
+```
+```{r}
+# Extract residuals and fitted values
+ residuals <- resid(model)
+ fitted_values <- fitted(model)
+ # 1. Residuals vs. Fitted Plot
+ plot(fitted_values, residuals,
+ main = "Residuals vs Fitted Values",
+ xlab = "Fitted Values",
+ ylab = "Residuals",
+ pch = 19, col = "blue")
+ abline(h = 0, lty = 2, col = "red")
+
+
+```
+
+```{r}
+
+
+numeric_data <- select_if(clean_data, is.numeric)
+corr_matrix <- cor(numeric_data, use = "complete.obs")
+corrplot(corr_matrix, method = "color", type = "upper", tl.cex = 0.8)
+
+
+
+```
+
+
+
+```{r}
+ggplot(clean_data, aes(x = factor(condition), y = price)) +
+  geom_boxplot(fill = "lightcoral") +
+  labs(title = "Price Distribution by Condition", x = "Condition", y = "Price") +
+  theme_minimal()
+
+```
+```{r}
+library(ggplot2)
+ggplot(clean_data, aes(x = sqft_living, y = price)) +
+  geom_point(alpha = 0.5, color = "darkblue") +
+  geom_smooth(method = "lm", color = "red") +
+  facet_wrap(~ condition, scales = "free_y") +
+  labs(title = "Price vs. Living Area by House Condition",
+       x = "Living Area (sqft)", y = "Price ($)") +
+  theme_minimal()
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+# Summarize average price by year built
+price_by_year <- clean_data %>%
+  group_by(yr_built) %>%
+  summarise(avg_price = mean(price, na.rm = TRUE)) %>%
+  ungroup()
+# Create line plot
+ggplot(price_by_year, aes(x = yr_built, y = avg_price)) +
+  geom_line(color = "darkblue", size = 1) +
+  geom_point(color = "darkblue", size = 2) +
+  labs(title = "Average House Price by Year Built",
+       x = "Year Built", y = "Average Price ($)") +
+  theme_minimal()
+```
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+# Load and clean the data
+data <- read.csv("data.csv")
+
+# Convert date to Date format and filter valid prices
+clean_data <- data %>%
+  mutate(date = as.Date(date)) %>%
+  filter(!is.na(price) & price > 0)
+
+# Aggregate prices by date (mean price per day)
+price_by_date <- clean_data %>%
+  group_by(date) %>%
+  summarise(avg_price = mean(price, na.rm = TRUE)) %>%
+  ungroup()
+
+# Create the line chart
+ggplot(price_by_date, aes(x = date, y = avg_price)) +
+  geom_line(color = "darkblue", size = 1) +
+  geom_point(color = "darkblue", size = 2) +
+  labs(title = "Average House Prices Over Time (May-July 2014)",
+       x = "Date",
+       y = "Average Price ($)") +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  scale_x_date(date_breaks = "1 week", date_labels = "%b %d") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+```{r}
+# Step 1: Load the data into a data frame called 'data'
+data <- read.csv("data.csv", stringsAsFactors = FALSE)
+
+# Step 2: Inspect the data
+cat("First few rows of the dataset:\n")
+head(data)
+
+cat("\nStructure of the dataset:\n")
+str(data)
+
+# Step 3: Compute descriptive statistics for numeric columns
+cat("\nDescriptive statistics for numeric columns:\n")
+numeric_cols <- sapply(data, is.numeric)
+desc_stats <- summary(data[, numeric_cols])
+print(desc_stats)
+
+# Alternative: Use psych package for more detailed statistics
+# Install psych if not already installed: install.packages("psych")
+library(psych)
+cat("\nDetailed descriptive statistics (using psych package):\n")
+psych_stats <- describe(data[, numeric_cols])
+print(psych_stats)
+
+# Step 4: Summarize categorical columns
+cat("\nSummary for categorical columns:\n")
+categorical_cols <- sapply(data, is.character)
+for (col in names(data)[categorical_cols]) {
+  cat("\nColumn:", col, "\n")
+  print(table(data[[col]]))
+}
+
+# Optional: Use summarytools for a comprehensive summary
+# Install summarytools if not already installed: install.packages("summarytools")
+library(summarytools)
+cat("\nComprehensive summary (using summarytools):\n")
+print(dfSummary(data))
+```
+
+```{r}
+# Debugging: Inspect the city and condition columns
+cat("Unique values in city:\n")
+print(unique(data$city))
+cat("\nUnique values in condition:\n")
+print(unique(data$condition))
+cat("\nSummary of city:\n")
+print(summary(as.factor(data$city)))
+cat("\nSummary of condition:\n")
+print(summary(as.factor(data$condition)))
+
+# Selecting numeric columns for descriptive statistics
+numeric_cols <- data %>%
+  select(price, bedrooms, bathrooms, sqft_living, sqft_lot, floors,
+         sqft_above, sqft_basement, yr_built, yr_renovated)
+
+# Calculating descriptive statistics for numeric variables
+numeric_stats <- descr(numeric_cols, stats = c("mean", "sd", "min", "q1", "med", "q3", "max"), round.digits = 2)
+
+# Printing numeric statistics
+cat("\nDescriptive Statistics for Numeric Variables:\n")
+print(numeric_stats)
+```
+
+
+```{r}
+
+
+# Step 2: Inspect the data
+cat("First few rows of the dataset:\n")
+head(data)
+
+cat("\nStructure of the dataset:\n")
+str(data)
+
+# Step 3: Compute descriptive statistics for numeric columns
+cat("\nDescriptive statistics for numeric columns:\n")
+numeric_cols <- sapply(data, is.numeric)
+desc_stats <- summary(data[, numeric_cols])
+print(desc_stats)
+
+# Alternative: Use psych package for more detailed statistics
+# Install psych if not already installed: install.packages("psych")
+library(psych)
+cat("\nDetailed descriptive statistics (using psych package):\n")
+psych_stats <- describe(data[, numeric_cols])
+print(psych_stats)
+
+# Step 4: Summarize categorical columns
+cat("\nSummary for categorical columns:\n")
+categorical_cols <- sapply(data, is.character)
+for (col in names(data)[categorical_cols]) {
+  cat("\nColumn:", col, "\n")
+  print(table(data[[col]]))
+}
+
+# Optional: Use summarytools for a comprehensive summary
+# Install summarytools if not already installed: install.packages("summarytools")
+library(summarytools)
+cat("\nComprehensive summary (using summarytools):\n")
+print(dfSummary(data))
+```
+
+```{r}
+png("correlation_matrix.png", width = 800, height = 600)
+corrplot(corr_matrix, method = "color", type = "upper", tl.cex = 0.8, title = "Correlation Matrix")
+dev.off()
+```
+

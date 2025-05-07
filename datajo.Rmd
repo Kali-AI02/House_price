@@ -1,0 +1,46 @@
+---
+title: "Untitled"
+author: "Joyeuse"
+date: "2025-04-16"
+output: html_document
+---
+
+
+```{r}
+setwd("C:/Users/USER/OneDrive/Desktop")
+library(readr)
+data <- read.csv("Math-Students.csv")
+View(data)
+library(ggplot2)
+
+ggplot(data, aes(x = sex, y = G3, fill = sex)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Pastel1") +
+  labs(title = "Final Grades by Gender", x = "Gender", y = "Final Grade (G3)") +
+  theme_minimal()
+
+ggplot(data, aes(x = absences)) +
+  geom_histogram(bins = 75, fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Absences",
+       x = "Number of Absences",
+       y = "Count") +
+  theme_minimal()
+```
+
+
+```{r}
+data2 <- table(data$G1,data$G3)
+View(data2)
+model1 <- lm(G1~G2,data=data)
+summary(model1)
+```
+```{r}
+anova(model1)
+```
+```{r}
+scatter.smooth(data$G1,data$G2)
+```
+```{r}
+
+```
+
